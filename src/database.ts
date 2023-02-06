@@ -11,4 +11,4 @@ export const client = new pg.Client({
 export const startDatabase = async () => {
   await client.connect();
   console.log("Database connected!");
-}
+};
