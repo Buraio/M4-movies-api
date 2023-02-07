@@ -1,15 +1,15 @@
 import { NextFunction, Request, Response } from "express";
-import { QueryConfig } from "pg";
+import { QueryConfig, QueryResult } from "pg";
 import { client } from "./database";
 
-const ensureMovieExistsUsingId = (
+const ensureMovieExistsUsingId = async (
   req: Request,
   res: Response,
   next: NextFunction
-) => {
+): Promise<Response | void> => {
   const paramsId: number = Number(req.params.id);
 
-  const queryString = `
+  const queryString: string = `
     SELECT *
     FROM movie_table
     WHERE movieId = $1;
@@ -20,11 +20,9 @@ const ensureMovieExistsUsingId = (
     values: [paramsId],
   };
 
-  const queryResult = client.query(queryConfig);
+  const queryResult: QueryResult = await client.query(queryConfig);
 
-  console.log(queryResult);
-
-  if (queryResult === undefined) {
+  if (queryResult.rows.length === 0) {
     return res.status(409).json({
       message: "Movie does not exists",
     });

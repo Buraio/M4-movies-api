@@ -5,6 +5,10 @@ interface iMovieObj {
   moviePrice: number;
 }
 
-export {
-  iMovieObj,
+interface iPageObj {
+  prevPage: number | null;
+  nextPage: number;
+  data: iMovieObj[];
 }
+
+export { iMovieObj, iPageObj };

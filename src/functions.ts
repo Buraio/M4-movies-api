@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { QueryConfig, QueryResult } from "pg";
-import { iMovieObj } from "./@types/types";
+import { iMovieObj, iPageObj } from "./@types/types";
 import { client } from "./database";
 
 const serverErrorMessage: string = "Internal server error";
@@ -54,14 +54,10 @@ const createMovie = async (req: Request, res: Response): Promise<Response> => {
   }
 };
 
-const readMovies = async (req: Request, res: Response) => {
+const readMovies = async (req: Request, res: Response): Promise<Response> => {
   try {
-    const perPage: number =
-      req.query.perPage === undefined ? 5 : Number(req.query.perPage);
-    let page: number =
-      req.query.page === undefined ? 0 : Number(req.query.page);
-
-    page = page * perPage;
+    const perPage: number = Number(req.query.perPage) || 5;
+    let page: number = Number(req.query.page) || 0;
 
     const queryString: string = `
     SELECT 
@@ -73,17 +69,83 @@ const readMovies = async (req: Request, res: Response) => {
 
     const queryConfig: QueryConfig = {
       text: queryString,
-      values: [perPage, page],
+      values: [perPage, perPage * (page - 1)],
     };
 
-    const queryResult = await client.query(queryConfig);
+    const queryResult: QueryResult = await client.query(queryConfig);
 
-    return res.status(200).json(queryResult.rows);
+    const prevPage = page - 1 >= 0 ? null : page - 1;
+    const nextPage = page + 1;
+
+    const resultObj: iPageObj = {
+      prevPage,
+      nextPage,
+      data: queryResult.rows,
+    };
+
+    if (resultObj.data.length === 0) {
+      return res.status(404).json({
+        message: "Error: page does not exist",
+      });
+    }
+
+    return res.status(200).json(resultObj);
+  } catch (error) {
+    return res.status(500).json({
+      message: serverErrorMessage,
+    });
+  }
+};
+
+const patchMovie = async (req: Request, res: Response): Promise<Response> => {
+  try {
+    const paramsId: number = parseInt(req.params.id);
+    const requestBody: iMovieObj[] = Object.values(req.body);
+
+    const queryString: string = `
+      UPDATE
+        movie_table
+      SET
+        movieName = $1,
+        movieDescription = $2,
+        movieDuration = $3,
+        moviePrice = $4
+      WHERE
+        movieId = $5
+      RETURNING *;
+    `;
+
+    const queryConfig: QueryConfig = {
+      text: queryString,
+      values: [...requestBody, paramsId],
+    };
+
+    const queryResult: QueryResult = await client.query(queryConfig);
+
+    return res.status(200).json(queryResult.rows[0]);
   } catch (error) {
     return res.status(500).send(serverErrorMessage);
   }
 };
 
-const patchMovie = async (req: Request, res: Response) => {};
+const deleteMovie = async (req: Request, res: Response): Promise<Response> => {
+  const paramsId: number = parseInt(req.params.id);
 
-export { createMovie, readMovies };
+  const queryString: string = `
+    DELETE FROM
+      movie_table
+    WHERE 
+      movieId = $1;
+  `;
+
+  const queryConfig: QueryConfig = {
+    text: queryString,
+    values: [paramsId],
+  };
+
+  await client.query(queryConfig);
+
+  return res.status(204).send();
+};
+
+export { createMovie, readMovies, patchMovie, deleteMovie };
