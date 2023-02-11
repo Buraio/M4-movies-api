@@ -1,13 +1,16 @@
-import express, { application, Application } from "express";
+import express, { Application } from "express";
 import { startDatabase } from "./database";
-import { createMovie, readMovies } from "./functions";
+import { createMovie, deleteMovie, patchMovie, readMovies } from "./functions";
+import { ensureMovieExistsUsingId } from "./middlewares";
 
 const app: Application = express();
 const port = 3000;
 app.use(express.json());
 
-app.post("/movies/create", createMovie);
-app.get("/movies/list", readMovies);
+app.post("/movies", createMovie);
+app.get("/movies", readMovies);
+app.patch("/movies/:id", ensureMovieExistsUsingId, patchMovie);
+app.delete("/movies/:id", ensureMovieExistsUsingId, deleteMovie);
 
 app.listen(port, async () => {
   await startDatabase();
