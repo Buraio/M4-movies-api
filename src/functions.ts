@@ -1,14 +1,12 @@
 import { Request, Response } from "express";
 import { QueryConfig, QueryResult } from "pg";
-import { iMovieObj, iPageObj } from "./@types/types";
+import { iMovieObj, iMovieQueryObj, iPageObj } from "./@types/types";
 import { client } from "./database";
 
 const serverErrorMessage: string = "Internal server error";
 
 const createMovie = async (req: Request, res: Response): Promise<Response> => {
   try {
-    const createMovieRequest: iMovieObj = req.body;
-
     let queryString: string = `
       SELECT * 
       FROM movie_table 
@@ -29,6 +27,13 @@ const createMovie = async (req: Request, res: Response): Promise<Response> => {
         message: "Movie already exists",
       });
     }
+
+    const createMovieRequest: iMovieObj = {
+      movieName: req.body.movieName,
+      movieDescription: req.body.movieDescription || null,
+      movieDuration: req.body.movieDuration,
+      moviePrice: req.body.moviePrice,
+    };
 
     queryString = `
       INSERT INTO movie_table(
@@ -100,9 +105,24 @@ const readMovies = async (req: Request, res: Response): Promise<Response> => {
 const patchMovie = async (req: Request, res: Response): Promise<Response> => {
   try {
     const paramsId: number = parseInt(req.params.id);
-    const requestBody: iMovieObj[] = Object.values(req.body);
 
-    const queryString: string = `
+    let queryString: string = `
+      SELECT * FROM
+        movie_table
+      WHERE movieId = $1
+    `;
+
+    let queryConfig: QueryConfig = {
+      text: queryString,
+      values: [paramsId],
+    }
+
+    let queryResult: QueryResult = await client.query(queryConfig);
+
+    const requestBody: iMovieObj = req.body;
+    const selectQueryData: iMovieQueryObj = queryResult.rows[0];
+
+    queryString = `
       UPDATE
         movie_table
       SET
@@ -115,12 +135,33 @@ const patchMovie = async (req: Request, res: Response): Promise<Response> => {
       RETURNING *;
     `;
 
-    const queryConfig: QueryConfig = {
+    console.log(selectQueryData)
+
+    const patchRequestObj: iMovieObj = {
+      movieName: requestBody.movieName,
+      movieDescription: requestBody.movieDescription,
+      movieDuration: requestBody.movieDuration,
+      moviePrice: requestBody.moviePrice
+    }
+
+    const selectQueryKeys = Object.keys(selectQueryData);
+    const selectQueryValues = Object.values(selectQueryData);
+    const requestValues = Object.values(patchRequestObj);
+    console.log(requestValues)
+
+    const filteredSelectValues = selectQueryValues.filter((item, index) => {
+      if (selectQueryKeys[index] !== 'movieid') {
+        return item;
+      }
+    })
+    console.log(filteredSelectValues)
+
+    queryConfig = {
       text: queryString,
-      values: [...requestBody, paramsId],
+      values: [...requestValues, paramsId],
     };
 
-    const queryResult: QueryResult = await client.query(queryConfig);
+    queryResult = await client.query(queryConfig);
 
     return res.status(200).json(queryResult.rows[0]);
   } catch (error) {

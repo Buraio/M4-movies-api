@@ -5,10 +5,16 @@ interface iMovieObj {
   moviePrice: number;
 }
 
+interface iMovieQueryObj extends iMovieObj {
+  movieid: string;
+}
+
 interface iPageObj {
   prevPage: number | null;
   nextPage: number;
   data: iMovieObj[];
 }
 
-export { iMovieObj, iPageObj };
+type QueryObjKeys = ["movieid"]
+
+export { iMovieObj, iMovieQueryObj, iPageObj };
