@@ -15,6 +15,4 @@ interface iPageObj {
   data: iMovieObj[];
 }
 
-type QueryObjKeys = ["movieid"]
-
 export { iMovieObj, iMovieQueryObj, iPageObj };
