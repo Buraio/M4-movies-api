@@ -135,8 +135,6 @@ const patchMovie = async (req: Request, res: Response): Promise<Response> => {
       RETURNING *;
     `;
 
-    console.log(selectQueryData)
-
     const patchRequestObj: iMovieObj = {
       movieName: requestBody.movieName,
       movieDescription: requestBody.movieDescription,
@@ -147,14 +145,12 @@ const patchMovie = async (req: Request, res: Response): Promise<Response> => {
     const selectQueryKeys = Object.keys(selectQueryData);
     const selectQueryValues = Object.values(selectQueryData);
     const requestValues = Object.values(patchRequestObj);
-    console.log(requestValues)
 
     const filteredSelectValues = selectQueryValues.filter((item, index) => {
       if (selectQueryKeys[index] !== 'movieid') {
         return item;
       }
     })
-    console.log(filteredSelectValues)
 
     queryConfig = {
       text: queryString,
